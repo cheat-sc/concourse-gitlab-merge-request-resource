@@ -1,0 +1,29 @@
+[package]
+name = "concourse-gitlab-merge-request-resource"
+version = "1.0.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+authors = ["Shohei Maruyama <cheat.sc.linux@outlook.com>"]
+
+[[bin]]
+name = "check"
+path = "src/check.rs"
+
+[[bin]]
+name = "in"
+path = "src/in.rs"
+
+[[bin]]
+name = "out"
+path = "src/out.rs"
+
+[dependencies]
+anyhow = "1.0.66"
+chrono = "0.4.22"
+clap = { version = "4.0.18", features = ["derive"] }
+git2 = "0.15.0"
+gitlab = "0.1504.0"
+glob = "0.3.0"
+serde = "1.0.145"
+serde_json = "1.0.87"
+url = "2.3.1"
