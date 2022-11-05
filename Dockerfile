@@ -8,6 +8,8 @@ RUN --mount=type=cache,target=/src/target \
 	cargo build --release && cargo install --path .
 
 FROM archlinux
+RUN --mount=type=cache,sharing=locked,target=/var/cache/pacman pacman -Sy --noconfirm archlinux-keyring
+RUN --mount=type=cache,sharing=locked,target=/var/cache/pacman pacman -Su --noconfirm
 COPY --from=builder /root/.cargo/bin/check /opt/resource/
 COPY --from=builder /root/.cargo/bin/in /opt/resource/
 COPY --from=builder /root/.cargo/bin/out /opt/resource/
