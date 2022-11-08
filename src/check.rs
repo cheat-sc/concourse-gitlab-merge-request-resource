@@ -44,7 +44,9 @@ fn main() -> Result<()> {
 
 	/* filter mrs by draft */
 	if let Some(skip_draft) = input.source.skip_draft {
-		builder.wip(if skip_draft { YesNo::Yes } else { YesNo::No });
+		if skip_draft {
+			builder.wip(YesNo::No);
+		}
 	}
 
 	let mrs: Vec<MergeRequest> = builder.build()?
