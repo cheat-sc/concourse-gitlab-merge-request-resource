@@ -147,7 +147,7 @@ Build resource image with buildkit
 
 .. code-block:: fish
 
-   $ buildkit build --frontend dockerfile.v0 --local dockerfile=. --local context=. --export-cache type=local,dest=$HOME/buildkit-cache --import-cache type=local,src=$HOME/buildkit-cache
+   $ buildctl build --frontend dockerfile.v0 --local dockerfile=. --local context=. --export-cache type=local,dest=$HOME/buildkit-cache --import-cache type=local,src=$HOME/buildkit-cache
 
 License
 =======
