@@ -31,6 +31,7 @@ struct Params {
 	resource_name: String,
 	status: String,
 	pipeline_name: Option<String>,
+	coverage: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -138,7 +139,8 @@ fn main() -> Result<()> {
 		format!("{}::{}", build_team_name, build_pipeline_name)
 	};
 
-	let response: CommitStatusResponce = commits::CreateCommitStatus::builder()
+	let mut builder = commits::CreateCommitStatus::builder();
+	builder
 		.project(mr.source_project_id)
 		.commit(&version.sha)
 		.state(match input.params.status.as_str() {
@@ -150,9 +152,12 @@ fn main() -> Result<()> {
 			_ => panic!("invalid status"),
 		})
 		.name(&pipeline_name)
-		.target_url(&concourse_uri)
-		.build()?
-		.query(&client)?;
+		.target_url(&concourse_uri);
+	if let Some(coverage) = input.params.coverage {
+		builder.coverage(coverage);
+	}
+
+	let response: CommitStatusResponce = builder.build()?.query(&client)?;
 
 	#[allow(clippy::redundant_field_names)]
 	let output = ResourceOutput {
