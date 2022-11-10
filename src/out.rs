@@ -36,6 +36,31 @@ struct Args {
 	directory: String,
 }
 
+fn compose_params_from_instance_vars(instance_vars: &serde_json::Map<String, serde_json::Value>, parent: Option<&String>) -> Option<String> {
+	let mut params = Vec::<String>::new();
+
+	/* NOTE: instance vars always dictionary */
+	for (key, value) in instance_vars.iter() {
+		let param = if let Some(parent) = parent {
+			format!("{}.{}", parent, key)
+		} else {
+			key.to_owned()
+		};
+
+		if value.is_object() {
+			params.push(compose_params_from_instance_vars(value.as_object().unwrap(), Some(&param)).unwrap());
+		} else {
+			params.push(format!("vars.{}={}", &param, &value).replace("\"", "%22"));
+		}
+	}
+
+	if params.is_empty() {
+		None
+	} else {
+		Some(params.join("&"))
+	}
+}
+
 fn main() -> Result<()> {
 	let args = Args::parse();
 
@@ -64,12 +89,7 @@ fn main() -> Result<()> {
 	let build_pipeline_instance_vars = match env::var("BUILD_PIPELINE_INSTANCE_VARS") {
 		Ok(v) => {
 			let instance_vars: serde_json::Value = serde_json::from_str(&v).unwrap();
-			let mut params = String::from("?");
-			for (key, value) in instance_vars.as_object().unwrap().iter() {
-				params.push_str(&format!("{}={}&", key, value.as_str().unwrap()));
-			}
-			params.pop();
-			params
+			format!("?{}", compose_params_from_instance_vars(&instance_vars.as_object().unwrap(), None).unwrap())
 		},
 		Err(_) => "".to_owned(),
 	};
@@ -123,4 +143,82 @@ fn main() -> Result<()> {
 	};
 	println!("{}", serde_json::to_string_pretty(&output)?);
 	Ok(())
+}
+
+
+#[cfg(test)]
+mod compose_params_from_instance_vars_tests {
+	use super::*;
+
+	#[test]
+	fn test_generate_url_with_no_parameter() {
+		let json = serde_json::json!({});
+		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
+		assert!(url == None);
+	}
+
+	#[test]
+	fn test_generate_url_with_a_string_parameter() {
+		let json = serde_json::json!({ "a": "s" });
+		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
+		assert!(url == Some("vars.a=%22s%22".to_owned()));
+	}
+
+	#[test]
+	fn test_generate_url_with_a_integer_parameter() {
+		let json = serde_json::json!({ "a": 0 });
+		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
+		assert!(url == Some("vars.a=0".to_owned()));
+	}
+
+	#[test]
+	fn test_generate_url_with_a_boolean_parameter() {
+		let json = serde_json::json!({ "a": true });
+		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
+		assert!(url == Some("vars.a=true".to_owned()));
+	}
+
+	#[test]
+	fn test_generate_url_with_nested_parameter() {
+		let json = serde_json::json!({
+			"a": {
+				"a": 0,
+				"b": true
+			}
+		});
+		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
+		assert!(url == Some("vars.a.a=0&vars.a.b=true".to_owned()));
+	}
+
+	#[test]
+	fn test_generate_url_with_more_nested_parameter() {
+		let json = serde_json::json!({
+			"a": {
+				"a": 0,
+				"b": {
+					"c": 0,
+					"d": {
+						"e": 0
+					}
+				}
+			}
+		});
+		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
+		assert!(url == Some("vars.a.a=0&vars.a.b.c=0&vars.a.b.d.e=0".to_owned()));
+	}
+
+	#[test]
+	fn test_generate_url_with_complex_parameter() {
+		let json = serde_json::json!({
+			"a": 0,
+			"b": {
+				"a": 0,
+				"b": true
+			},
+			"c": "0-0"
+		});
+		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
+		assert!(url == Some("vars.a=0&vars.b.a=0&vars.b.b=true&vars.c=%220-0%22".to_owned()));
+	}
+
 }
