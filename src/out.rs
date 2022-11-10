@@ -114,7 +114,7 @@ fn main() -> Result<()> {
 		format!("{}::{}", build_team_name, build_pipeline_name)
 	};
 
-	let responce: CommitStatusResponce = commits::CreateCommitStatus::builder()
+	let response: CommitStatusResponce = commits::CreateCommitStatus::builder()
 		.project(mr.source_project_id)
 		.commit(&version.sha)
 		.state(
@@ -138,7 +138,7 @@ fn main() -> Result<()> {
 			Metadata { name: "url".to_owned(), value: mr.web_url },
 			Metadata { name: "author".to_owned(), value: mr.author.name },
 			Metadata { name: "title".to_owned(), value: mr.title },
-			Metadata { name: "status".to_owned(), value: responce.status },
+			Metadata { name: "status".to_owned(), value: response.status },
 		]
 	};
 	println!("{}", serde_json::to_string_pretty(&output)?);
