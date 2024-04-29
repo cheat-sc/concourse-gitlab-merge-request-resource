@@ -1,0 +1,26 @@
+default:
+  image: archlinux:base-devel
+  before_script:
+  - pacman -Syu --noconfirm rustup
+  - rustup toolchain install nightly
+
+stages:
+- sanity
+- build
+- test
+
+rustfmt:
+  stage: sanity
+  script:
+  - rustup component add rustfmt
+  - cargo fmt --check
+
+build:
+  stage: build
+  script:
+  - cargo build
+
+unit-test:
+  stage: test
+  script:
+  - cargo test
