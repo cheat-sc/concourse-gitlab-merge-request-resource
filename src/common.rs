@@ -1,7 +1,10 @@
-use serde::{ Deserialize, Serialize };
+use serde::{
+	Deserialize,
+	Serialize,
+};
 use serde_json;
-use std::io;
 use std::error;
+use std::io;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Params {
@@ -83,14 +86,19 @@ pub fn get_data_from<T: for<'de> Deserialize<'de>>(stdin: &mut impl io::Read) ->
 
 #[cfg(test)]
 mod tests {
-    use super::{ get_data_from, Source, Deserialize, Version };
+	use super::{
+		get_data_from,
+		Deserialize,
+		Source,
+		Version,
+	};
 
 	#[test]
 	fn test_get_data_from() {
 		#[derive(Debug, Deserialize, PartialEq)]
 		struct ResourceInput {
 			source: Source,
-			version: Option<Version>
+			version: Option<Version>,
 		}
 
 		let dummy = r#"

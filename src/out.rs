@@ -1,15 +1,31 @@
 mod common;
-use common::*;
-use std::io;
-use std::fs::File;
-use serde::{Serialize, Deserialize};
-use serde_json;
+use anyhow::{
+	anyhow,
+	Context,
+	Result,
+};
 use clap::Parser;
+use common::*;
+use gitlab::{
+	api::{
+		projects::{
+			merge_requests,
+			repository::commits,
+		},
+		Query,
+	},
+	Gitlab,
+};
+use serde::{
+	Deserialize,
+	Serialize,
+};
+use serde_json;
+use std::env;
+use std::fs::File;
+use std::io;
 use std::path::Path;
 use url::Url;
-use gitlab::{ Gitlab, api::{ projects::{ repository::commits, merge_requests }, Query} };
-use std::env;
-use anyhow::{ Result, anyhow, Context };
 
 #[derive(Debug, Deserialize)]
 struct Params {
@@ -36,7 +52,10 @@ struct Args {
 	directory: String,
 }
 
-fn compose_params_from_instance_vars(instance_vars: &serde_json::Map<String, serde_json::Value>, parent: Option<&String>) -> Option<String> {
+fn compose_params_from_instance_vars(
+	instance_vars: &serde_json::Map<String, serde_json::Value>,
+	parent: Option<&String>,
+) -> Option<String> {
 	let mut params = Vec::<String>::new();
 
 	/* NOTE: instance vars always dictionary */
@@ -64,16 +83,17 @@ fn compose_params_from_instance_vars(instance_vars: &serde_json::Map<String, ser
 fn main() -> Result<()> {
 	let args = Args::parse();
 
-	let input: ResourceInput = get_data_from(&mut io::stdin()).map_err(|err| anyhow!("{}", err.downcast::<serde_json::Error>().unwrap()))?;
-	let version: Version = serde_json::from_reader(
-		File::open(Path::new(&args.directory).join(&input.params.resource_name).join(".merge-request.json"))?
-	).with_context(|| anyhow!("failed to read `.merge-request.json`"))?;
+	let input: ResourceInput =
+		get_data_from(&mut io::stdin()).map_err(|err| anyhow!("{}", err.downcast::<serde_json::Error>().unwrap()))?;
+	let version: Version = serde_json::from_reader(File::open(
+		Path::new(&args.directory)
+			.join(&input.params.resource_name)
+			.join(".merge-request.json"),
+	)?)
+	.with_context(|| anyhow!("failed to read `.merge-request.json`"))?;
 
 	let uri = Url::parse(&input.source.uri)?;
-	let client = Gitlab::new(
-		uri.host_str().unwrap(),
-		&input.source.private_token,
-	)?;
+	let client = Gitlab::new(uri.host_str().unwrap(), &input.source.private_token)?;
 
 	let mr: MergeRequest = merge_requests::MergeRequest::builder()
 		.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
@@ -82,14 +102,18 @@ fn main() -> Result<()> {
 		.query(&client)?;
 
 	/* get environment variables */
-	let build_pipeline_name = env::var("BUILD_PIPELINE_NAME").with_context(|| anyhow!("BUILD_PIPELINE_NAME is not set"))?;
+	let build_pipeline_name =
+		env::var("BUILD_PIPELINE_NAME").with_context(|| anyhow!("BUILD_PIPELINE_NAME is not set"))?;
 	let build_job_name = env::var("BUILD_JOB_NAME").with_context(|| anyhow!("BUILD_JOB_NAME is not set"))?;
 	let build_team_name = env::var("BUILD_TEAM_NAME").with_context(|| anyhow!("BUILD_TEAM_NAME is not set"))?;
 	let build_name = env::var("BUILD_NAME").with_context(|| anyhow!("BUILD_NAME is not set"))?;
 	let build_pipeline_instance_vars = match env::var("BUILD_PIPELINE_INSTANCE_VARS") {
 		Ok(v) => {
 			let instance_vars: serde_json::Value = serde_json::from_str(&v).unwrap();
-			format!("?{}", compose_params_from_instance_vars(&instance_vars.as_object().unwrap(), None).unwrap())
+			format!(
+				"?{}",
+				compose_params_from_instance_vars(&instance_vars.as_object().unwrap(), None).unwrap()
+			)
 		},
 		Err(_) => "".to_owned(),
 	};
@@ -105,7 +129,8 @@ fn main() -> Result<()> {
 	);
 
 	let pipeline_name = if let Some(pipeline_name) = &input.params.pipeline_name {
-		pipeline_name.clone()
+		pipeline_name
+			.clone()
 			.replace("%BUILD_PIPELINE_NAME%", &build_pipeline_name)
 			.replace("%BUILD_JOB_NAME%", &build_job_name)
 			.replace("%BUILD_TEAM_NAME%", &build_team_name)
@@ -117,16 +142,14 @@ fn main() -> Result<()> {
 	let response: CommitStatusResponce = commits::CreateCommitStatus::builder()
 		.project(mr.source_project_id)
 		.commit(&version.sha)
-		.state(
-			match input.params.status.as_str() {
-				"canceled" => commits::CommitStatusState::Canceled,
-				"running" => commits::CommitStatusState::Running,
-				"pending" => commits::CommitStatusState::Pending,
-				"failed" => commits::CommitStatusState::Failed,
-				"success" => commits::CommitStatusState::Success,
-				_ => panic!("invalid status")
-			}
-		)
+		.state(match input.params.status.as_str() {
+			"canceled" => commits::CommitStatusState::Canceled,
+			"running" => commits::CommitStatusState::Running,
+			"pending" => commits::CommitStatusState::Pending,
+			"failed" => commits::CommitStatusState::Failed,
+			"success" => commits::CommitStatusState::Success,
+			_ => panic!("invalid status"),
+		})
 		.name(&pipeline_name)
 		.target_url(&concourse_uri)
 		.build()?
@@ -135,16 +158,27 @@ fn main() -> Result<()> {
 	let output = ResourceOutput {
 		version: version,
 		metadata: vec![
-			Metadata { name: "url".to_owned(), value: mr.web_url },
-			Metadata { name: "author".to_owned(), value: mr.author.name },
-			Metadata { name: "title".to_owned(), value: mr.title },
-			Metadata { name: "status".to_owned(), value: response.status },
-		]
+			Metadata {
+				name: "url".to_owned(),
+				value: mr.web_url,
+			},
+			Metadata {
+				name: "author".to_owned(),
+				value: mr.author.name,
+			},
+			Metadata {
+				name: "title".to_owned(),
+				value: mr.title,
+			},
+			Metadata {
+				name: "status".to_owned(),
+				value: response.status,
+			},
+		],
 	};
 	println!("{}", serde_json::to_string_pretty(&output)?);
 	Ok(())
 }
-
 
 #[cfg(test)]
 mod compose_params_from_instance_vars_tests {
@@ -220,5 +254,4 @@ mod compose_params_from_instance_vars_tests {
 		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
 		assert!(url == Some("vars.a=0&vars.b.a=0&vars.b.b=true&vars.c=%220-0%22".to_owned()));
 	}
-
 }

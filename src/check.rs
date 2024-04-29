@@ -1,15 +1,36 @@
 mod common;
+use anyhow::{
+	anyhow,
+	Result,
+};
+use chrono::{
+	DateTime,
+	Utc,
+};
 use common::*;
+use gitlab::api::{
+	common::{
+		SortOrder,
+		YesNo,
+	},
+	projects::{
+		merge_requests::{
+			self,
+			MergeRequestOrderBy,
+			MergeRequestState,
+			MergeRequests,
+		},
+		repository::commits,
+	},
+	Query,
+};
 use gitlab::Gitlab;
-use gitlab::api::{ Query, projects::{ merge_requests::{ self, MergeRequests, MergeRequestState, MergeRequestOrderBy }, repository::commits }, common::{ SortOrder, YesNo } };
-use serde_json;
+use glob::Pattern;
 use serde::Deserialize;
+use serde_json;
 use std::io;
 use std::str::FromStr;
 use url::Url;
-use chrono::{ DateTime, Utc };
-use glob::Pattern;
-use anyhow::{ Result, anyhow };
 
 #[derive(Debug, Deserialize)]
 pub struct ResourceInput {
@@ -18,16 +39,15 @@ pub struct ResourceInput {
 }
 
 fn main() -> Result<()> {
-	let input: ResourceInput = get_data_from(&mut io::stdin()).map_err(|err| anyhow!("{}", err.downcast::<serde_json::Error>().unwrap()))?;
+	let input: ResourceInput =
+		get_data_from(&mut io::stdin()).map_err(|err| anyhow!("{}", err.downcast::<serde_json::Error>().unwrap()))?;
 
 	let uri = Url::parse(&input.source.uri)?;
-	let client = Gitlab::new(
-		uri.host_str().unwrap(),
-		&input.source.private_token,
-	)?;
+	let client = Gitlab::new(uri.host_str().unwrap(), &input.source.private_token)?;
 
 	let mut builder = MergeRequests::builder();
-	builder.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
+	builder
+		.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
 		.order_by(MergeRequestOrderBy::UpdatedAt)
 		.state(MergeRequestState::Opened)
 		.sort(SortOrder::Ascending);
@@ -49,8 +69,7 @@ fn main() -> Result<()> {
 		}
 	}
 
-	let mrs: Vec<MergeRequest> = builder.build()?
-		.query(&client)?;
+	let mrs: Vec<MergeRequest> = builder.build()?.query(&client)?;
 
 	let mut versions = Vec::<Version>::new();
 	for mr in mrs {
@@ -63,7 +82,11 @@ fn main() -> Result<()> {
 				.merge_request(mr.iid)
 				.build()?
 				.query(&client)?;
-			if !changes.changes.iter().any(|change| { patterns.iter().any(|pattern| pattern.matches(&change.new_path)) }) {
+			if !changes
+				.changes
+				.iter()
+				.any(|change| patterns.iter().any(|pattern| pattern.matches(&change.new_path)))
+			{
 				continue;
 			}
 		}
@@ -73,7 +96,11 @@ fn main() -> Result<()> {
 			.commit(&mr.sha)
 			.build()?
 			.query(&client)?;
-		versions.push(Version { iid: mr.iid.to_string(), committed_date: commit.committed_date, sha: mr.sha });
+		versions.push(Version {
+			iid: mr.iid.to_string(),
+			committed_date: commit.committed_date,
+			sha: mr.sha,
+		});
 	}
 
 	println!("{}", serde_json::to_string_pretty(&versions)?);
