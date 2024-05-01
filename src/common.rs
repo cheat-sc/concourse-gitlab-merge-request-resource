@@ -62,7 +62,7 @@ pub struct MergeRequest {
 	pub web_url: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Version {
 	pub iid: String,
 	pub committed_date: String,
