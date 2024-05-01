@@ -38,11 +38,23 @@ struct Params {
 	skip_clone: Option<bool>,
 }
 
+impl Params {
+	fn is_clone_skippable(&self) -> bool {
+		self.skip_clone.is_some_and(|skip_clone| skip_clone)
+	}
+}
+
 #[derive(Debug, Deserialize)]
 struct ResourceInput {
 	version: Option<Version>,
 	source: Source,
 	params: Option<Params>,
+}
+
+impl ResourceInput {
+	pub fn is_clone_skippable(&self) -> bool {
+		self.params.as_ref().is_some_and(|params| params.is_clone_skippable())
+	}
 }
 
 #[derive(Debug, Serialize)]
@@ -66,7 +78,7 @@ fn main() -> Result<()> {
 	let uri = Url::parse(&input.source.uri)?;
 	let client = Gitlab::new(uri.host_str().unwrap(), &input.source.private_token)?;
 
-	let version = input.version.unwrap();
+	let version = input.version.as_ref().unwrap();
 
 	let mr: MergeRequest = merge_requests::MergeRequest::builder()
 		.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
@@ -80,7 +92,7 @@ fn main() -> Result<()> {
 		.query(&client)?;
 
 	let output = ResourceOutput {
-		version: version,
+		version: version.clone(),
 		metadata: vec![
 			Metadata {
 				name: "url".to_owned(),
@@ -99,18 +111,7 @@ fn main() -> Result<()> {
 
 	println!("{}", serde_json::to_string_pretty(&output)?);
 
-	if {
-		/* FIXME: Use is_some_and() */
-		if let Some(params) = &input.params {
-			if let Some(skip_clone) = &params.skip_clone {
-				!skip_clone
-			} else {
-				true
-			}
-		} else {
-			true
-		}
-	} {
+	if !input.is_clone_skippable() {
 		eprintln!("Cloning repository...");
 		let mut cb = RemoteCallbacks::new();
 		cb.credentials(|_, _, _| Cred::userpass_plaintext("oauth2", &input.source.private_token));
@@ -137,4 +138,34 @@ fn main() -> Result<()> {
 		.with_context(|| anyhow!("failed to create `.merge-request.json`"))?;
 	serde_json::to_writer_pretty(file, &output.version)?;
 	Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+	use super::{
+		Params,
+		ResourceInput,
+		Source,
+	};
+	use rstest::rstest;
+
+	#[rstest]
+	#[case::no_params(None, false)]
+	#[case::skip_true(Some(Params { skip_clone: Some(true) }), true)]
+	#[case::skip_false(Some(Params { skip_clone: Some(false) }), false)]
+	#[case::no_skip_param(Some(Params { skip_clone: None }), false)]
+	fn test_is_clone_skippable(#[case] params: Option<Params>, #[case] expect: bool) {
+		let input = ResourceInput {
+			params: params,
+			source: Source {
+				labels: None,
+				paths: None,
+				private_token: "".to_owned(),
+				uri: "".to_owned(),
+				skip_draft: None,
+			},
+			version: None,
+		};
+		assert_eq!(input.is_clone_skippable(), expect);
+	}
 }
