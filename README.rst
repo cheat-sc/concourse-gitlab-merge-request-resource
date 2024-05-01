@@ -41,7 +41,7 @@ This just gets merge requests and sets them `success`.
        params:
          resource_name: merge-request
          status: running
-   -   put: merge-request
+     - put: merge-request
        params:
          resource_name: merge-request
          status: success
