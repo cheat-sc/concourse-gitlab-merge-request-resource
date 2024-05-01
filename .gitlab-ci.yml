@@ -9,6 +9,12 @@ stages:
 - build
 - test
 
+clippy:
+  stage: sanity
+  script:
+  - rustup component add clippy
+  - cargo clippy -- --deny warnings
+
 rustfmt:
   stage: sanity
   script:
