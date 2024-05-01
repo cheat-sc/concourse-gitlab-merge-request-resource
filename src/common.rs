@@ -2,7 +2,6 @@ use serde::{
 	Deserialize,
 	Serialize,
 };
-use serde_json;
 use std::error;
 use std::io;
 
@@ -19,37 +18,44 @@ pub struct Metadata {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct CommitStatusResponce {
 	pub status: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct Commit {
 	pub committed_date: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct Project {
 	pub http_url_to_repo: String,
 	pub ssh_url_to_repo: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct Author {
 	pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct Change {
 	pub new_path: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct MergeRequestChanges {
 	pub changes: Vec<Change>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct MergeRequest {
 	pub iid: u64,
 	pub title: String,

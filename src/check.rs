@@ -27,7 +27,6 @@ use gitlab::api::{
 use gitlab::Gitlab;
 use glob::Pattern;
 use serde::Deserialize;
-use serde_json;
 use std::io;
 use std::str::FromStr;
 use url::Url;
@@ -47,7 +46,7 @@ fn main() -> Result<()> {
 
 	let mut builder = MergeRequests::builder();
 	builder
-		.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
+		.project(uri.path().trim_start_matches('/').trim_end_matches(".git"))
 		.order_by(MergeRequestOrderBy::UpdatedAt)
 		.state(MergeRequestState::Opened)
 		.sort(SortOrder::Ascending);
@@ -78,7 +77,7 @@ fn main() -> Result<()> {
 			let patterns: Vec<Pattern> = paths.iter().map(|path| Pattern::new(path).unwrap()).collect();
 
 			let changes: MergeRequestChanges = merge_requests::MergeRequestChanges::builder()
-				.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
+				.project(uri.path().trim_start_matches('/').trim_end_matches(".git"))
 				.merge_request(mr.iid)
 				.build()?
 				.query(&client)?;

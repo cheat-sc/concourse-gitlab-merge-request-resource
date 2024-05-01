@@ -25,7 +25,6 @@ use serde::{
 	Deserialize,
 	Serialize,
 };
-use serde_json;
 use std::path::Path;
 use std::{
 	fs::File,
@@ -81,7 +80,7 @@ fn main() -> Result<()> {
 	let version = input.version.as_ref().unwrap();
 
 	let mr: MergeRequest = merge_requests::MergeRequest::builder()
-		.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
+		.project(uri.path().trim_start_matches('/').trim_end_matches(".git"))
 		.merge_request(version.iid.parse::<u64>()?)
 		.build()?
 		.query(&client)?;
@@ -155,6 +154,7 @@ mod tests {
 	#[case::skip_false(Some(Params { skip_clone: Some(false) }), false)]
 	#[case::no_skip_param(Some(Params { skip_clone: None }), false)]
 	fn test_is_clone_skippable(#[case] params: Option<Params>, #[case] expect: bool) {
+		#[allow(clippy::redundant_field_names)]
 		let input = ResourceInput {
 			params: params,
 			source: Source {

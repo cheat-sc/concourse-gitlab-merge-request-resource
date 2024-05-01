@@ -20,7 +20,6 @@ use serde::{
 	Deserialize,
 	Serialize,
 };
-use serde_json;
 use std::env;
 use std::fs::File;
 use std::io;
@@ -69,7 +68,7 @@ fn compose_params_from_instance_vars(
 		if value.is_object() {
 			params.push(compose_params_from_instance_vars(value.as_object().unwrap(), Some(&param)).unwrap());
 		} else {
-			params.push(format!("vars.{}={}", &param, &value).replace("\"", "%22"));
+			params.push(format!("vars.{}={}", &param, &value).replace('"', "%22"));
 		}
 	}
 
@@ -96,7 +95,7 @@ fn main() -> Result<()> {
 	let client = Gitlab::new(uri.host_str().unwrap(), &input.source.private_token)?;
 
 	let mr: MergeRequest = merge_requests::MergeRequest::builder()
-		.project(uri.path().trim_start_matches("/").trim_end_matches(".git"))
+		.project(uri.path().trim_start_matches('/').trim_end_matches(".git"))
 		.merge_request(version.iid.parse::<u64>().unwrap())
 		.build()?
 		.query(&client)?;
@@ -112,7 +111,7 @@ fn main() -> Result<()> {
 			let instance_vars: serde_json::Value = serde_json::from_str(&v).unwrap();
 			format!(
 				"?{}",
-				compose_params_from_instance_vars(&instance_vars.as_object().unwrap(), None).unwrap()
+				compose_params_from_instance_vars(instance_vars.as_object().unwrap(), None).unwrap()
 			)
 		},
 		Err(_) => "".to_owned(),
@@ -155,6 +154,7 @@ fn main() -> Result<()> {
 		.build()?
 		.query(&client)?;
 
+	#[allow(clippy::redundant_field_names)]
 	let output = ResourceOutput {
 		version: version,
 		metadata: vec![
@@ -188,7 +188,7 @@ mod compose_params_from_instance_vars_tests {
 	fn test_generate_url_with_no_parameter() {
 		let json = serde_json::json!({});
 		let url = compose_params_from_instance_vars(json.as_object().unwrap(), None);
-		assert!(url == None);
+		assert!(url.is_none());
 	}
 
 	#[test]
