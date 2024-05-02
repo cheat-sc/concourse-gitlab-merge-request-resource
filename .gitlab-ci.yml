@@ -29,4 +29,9 @@ build:
 unit-test:
   stage: test
   script:
-  - cargo test
+  - cargo install --root . cargo2junit
+  - cargo test -- -Z unstable-options --format json --report-time | bin/cargo2junit > reports.xml
+  artifacts:
+    when: always
+    reports:
+      junit: reports.xml
