@@ -130,6 +130,10 @@ Update the status of a merge request.
        * ``%BUILD_PIPELINE_INSTANCE_VARS%``
 
        By default, ``%BUILD_TEAM_NAME%::%BUILD_PIPELINE_NAME%`` is set.
+   * - coverage
+     - Float
+     - Optional
+     - Set coverage.
 
 Build
 =====
