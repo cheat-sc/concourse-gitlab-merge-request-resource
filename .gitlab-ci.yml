@@ -8,6 +8,7 @@ stages:
 - sanity
 - build
 - test
+- release
 
 clippy:
   stage: sanity
@@ -30,3 +31,11 @@ unit-test:
   stage: test
   script:
   - cargo test
+
+release:
+  stage: release
+  only:
+  - tags
+  image:
+  script:
+  - buildctl build --frontend dockerfile.v0 --local dockerfile=. --local context=. --output type=image,name=${CI_REGISTRY}/concourse-gitlab-merge-request-resource:${CI_COMMIT_TAG},push=true
