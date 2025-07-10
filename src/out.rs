@@ -61,7 +61,7 @@ fn compose_params_from_instance_vars(
 	/* NOTE: instance vars always dictionary */
 	for (key, value) in instance_vars.iter() {
 		let param = if let Some(parent) = parent {
-			format!("{}.{}", parent, key)
+			format!("{parent}.{key}")
 		} else {
 			key.to_owned()
 		};
@@ -136,7 +136,7 @@ fn main() -> Result<()> {
 			.replace("%BUILD_TEAM_NAME%", &build_team_name)
 			.replace("%BUILD_PIPELINE_INSTANCE_VARS%", &build_pipeline_instance_vars)
 	} else {
-		format!("{}::{}", build_team_name, build_pipeline_name)
+		format!("{build_team_name}::{build_pipeline_name}")
 	};
 
 	let mut builder = commits::CreateCommitStatus::builder();

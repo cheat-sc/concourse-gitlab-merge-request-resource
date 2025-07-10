@@ -76,7 +76,7 @@ fn main() -> Result<()> {
 		if let Some(paths) = &input.source.paths {
 			let patterns: Vec<Pattern> = paths.iter().map(|path| Pattern::new(path).unwrap()).collect();
 
-			let changes: MergeRequestChanges = merge_requests::MergeRequestChanges::builder()
+			let changes: MergeRequestChanges = merge_requests::MergeRequestDiffs::builder()
 				.project(uri.path().trim_start_matches('/').trim_end_matches(".git"))
 				.merge_request(mr.iid)
 				.build()?

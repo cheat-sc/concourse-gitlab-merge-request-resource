@@ -22,7 +22,7 @@ anyhow = "1.0.82"
 chrono = "0.4.38"
 clap = { version = "4.5.4", features = ["derive"] }
 git2 = "0.15.0"
-gitlab = "0.1504.0"
+gitlab = "0.1801.0"
 glob = "0.3.1"
 serde = "1.0.199"
 serde_json = "1.0.116"
