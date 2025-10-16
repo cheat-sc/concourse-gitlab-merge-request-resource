@@ -6,12 +6,14 @@ use std::error;
 use std::io;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[allow(dead_code)]
 pub struct Params {
 	pub status: Option<String>,
 	pub coverage: Option<f32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[allow(dead_code)]
 pub struct Metadata {
 	pub name: String,
 	pub value: String,
