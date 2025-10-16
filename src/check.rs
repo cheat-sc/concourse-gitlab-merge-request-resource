@@ -99,6 +99,8 @@ fn main() -> Result<()> {
 			iid: mr.iid.to_string(),
 			committed_date: commit.committed_date,
 			sha: mr.sha,
+			source_branch: mr.source_branch,
+			target_branch: mr.target_branch,
 		});
 	}
 

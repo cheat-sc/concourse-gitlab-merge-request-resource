@@ -67,6 +67,7 @@ pub struct MergeRequest {
 	pub updated_at: String,
 	pub source_project_id: u64,
 	pub source_branch: String,
+	pub target_branch: String,
 	pub web_url: String,
 }
 
@@ -75,6 +76,8 @@ pub struct Version {
 	pub iid: String,
 	pub committed_date: String,
 	pub sha: String,
+	pub source_branch: String,
+	pub target_branch: String,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
