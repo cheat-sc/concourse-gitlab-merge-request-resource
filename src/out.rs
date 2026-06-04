@@ -69,7 +69,7 @@ fn compose_params_from_instance_vars(
 		if value.is_object() {
 			params.push(compose_params_from_instance_vars(value.as_object().unwrap(), Some(&param)).unwrap());
 		} else {
-			params.push(format!("vars.{}={}", &param, &value).replace('"', "%22"));
+			params.push(format!("vars.{}={}", param, value).replace('"', "%22"));
 		}
 	}
 
@@ -121,11 +121,11 @@ fn main() -> Result<()> {
 	let concourse_uri = format!(
 		"{}/teams/{}/pipelines/{}/jobs/{}/builds/{}{}",
 		env::var("ATC_EXTERNAL_URL").with_context(|| anyhow!("ATC_EXTERNAL_URL is not set"))?,
-		&build_team_name,
-		&build_pipeline_name,
-		&build_job_name,
-		&build_name,
-		&build_pipeline_instance_vars,
+		build_team_name,
+		build_pipeline_name,
+		build_job_name,
+		build_name,
+		build_pipeline_instance_vars,
 	);
 
 	let pipeline_name = if let Some(pipeline_name) = &input.params.pipeline_name {
