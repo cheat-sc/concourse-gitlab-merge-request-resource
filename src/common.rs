@@ -2,21 +2,12 @@ use serde::{
 	Deserialize,
 	Serialize,
 };
-use std::error;
-use std::io;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[allow(dead_code)]
 pub struct Params {
 	pub status: Option<String>,
 	pub coverage: Option<f32>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[allow(dead_code)]
-pub struct Metadata {
-	pub name: String,
-	pub value: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,58 +71,11 @@ pub struct Version {
 	pub target_branch: String,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Source {
 	pub uri: String,
 	pub private_token: String,
 	pub labels: Option<Vec<String>>,
 	pub paths: Option<Vec<String>>,
 	pub skip_draft: Option<bool>,
-}
-
-pub fn get_data_from<T: for<'de> Deserialize<'de>>(stdin: &mut impl io::Read) -> Result<T, Box<dyn error::Error>> {
-	let mut buffer = String::new();
-	stdin.read_to_string(&mut buffer)?;
-	Ok(serde_json::from_str(&buffer)?)
-}
-
-#[cfg(test)]
-mod tests {
-	use super::{
-		get_data_from,
-		Deserialize,
-		Source,
-		Version,
-	};
-
-	#[test]
-	fn test_get_data_from() {
-		#[derive(Debug, Deserialize, PartialEq)]
-		struct ResourceInput {
-			source: Source,
-			version: Option<Version>,
-		}
-
-		let dummy = r#"
-			{
-				"source": {
-					"uri": "https://gitlab.com/cheatsc/test.git",
-					"private_token": "zzzzz"
-				}
-			}
-		"#;
-		assert_eq!(
-			get_data_from::<ResourceInput>(&mut dummy.as_bytes()).unwrap(),
-			ResourceInput {
-				source: Source {
-					uri: "https://gitlab.com/cheatsc/test.git".to_owned(),
-					private_token: "zzzzz".to_owned(),
-					labels: None,
-					paths: None,
-					skip_draft: None,
-				},
-				version: None,
-			}
-		);
-	}
 }

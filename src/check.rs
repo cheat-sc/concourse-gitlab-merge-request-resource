@@ -1,8 +1,5 @@
 mod common;
-use anyhow::{
-	anyhow,
-	Result,
-};
+use anyhow::Result;
 use chrono::{
 	DateTime,
 	Utc,
@@ -26,21 +23,16 @@ use gitlab::api::{
 };
 use gitlab::Gitlab;
 use glob::Pattern;
-use serde::Deserialize;
+use rust_concourse_resource::{
+	check::Request,
+	resource::Resource,
+};
 use std::io;
 use std::str::FromStr;
 use url::Url;
 
-#[derive(Debug, Deserialize)]
-pub struct ResourceInput {
-	pub version: Option<Version>,
-	pub source: Source,
-}
-
 fn main() -> Result<()> {
-	let input: ResourceInput =
-		get_data_from(&mut io::stdin()).map_err(|err| anyhow!("{}", err.downcast::<serde_json::Error>().unwrap()))?;
-
+	let input = Request::<Source, Version>::from_reader(&mut io::stdin())?;
 	let uri = Url::parse(&input.source.uri)?;
 	let client = Gitlab::new(uri.host_str().unwrap(), &input.source.private_token)?;
 

@@ -279,6 +279,7 @@ dependencies = [
  "gitlab",
  "glob",
  "rstest",
+ "rust-concourse-resource",
  "serde",
  "serde_json",
  "url",
@@ -1349,6 +1350,16 @@ dependencies = [
  "rustc_version",
  "syn 2.0.104",
  "unicode-ident",
+]
+
+[[package]]
+name = "rust-concourse-resource"
+version = "0.1.0"
+source = "git+https://gitlab.com/cheatsc/rust-concourse-resource.git?rev=530ad14#530ad14a47de43a28054c190e94a50dad1568814"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

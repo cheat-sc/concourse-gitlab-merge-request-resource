@@ -21,6 +21,16 @@ use gitlab::api::{
 	Query,
 };
 use gitlab::Gitlab;
+use rust_concourse_resource::{
+	input::{
+		Request,
+		Response,
+	},
+	resource::{
+		Metadata,
+		Resource,
+	},
+};
 use serde::{
 	Deserialize,
 	Serialize,
@@ -32,7 +42,7 @@ use std::{
 };
 use url::Url;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Params {
 	skip_clone: Option<bool>,
 }
@@ -41,25 +51,6 @@ impl Params {
 	fn is_clone_skippable(&self) -> bool {
 		self.skip_clone.is_some_and(|skip_clone| skip_clone)
 	}
-}
-
-#[derive(Debug, Deserialize)]
-struct ResourceInput {
-	version: Option<Version>,
-	source: Source,
-	params: Option<Params>,
-}
-
-impl ResourceInput {
-	pub fn is_clone_skippable(&self) -> bool {
-		self.params.as_ref().is_some_and(|params| params.is_clone_skippable())
-	}
-}
-
-#[derive(Debug, Serialize)]
-struct ResourceOutput {
-	version: Version,
-	metadata: Vec<Metadata>,
 }
 
 #[derive(Parser)]
@@ -71,17 +62,13 @@ struct Args {
 fn main() -> Result<()> {
 	let args = Args::parse();
 
-	let input: ResourceInput =
-		get_data_from(&mut io::stdin()).map_err(|err| anyhow!("{}", err.downcast::<serde_json::Error>().unwrap()))?;
-
+	let input = Request::<Version, Source, Params>::from_reader(&mut io::stdin())?;
 	let uri = Url::parse(&input.source.uri)?;
 	let client = Gitlab::new(uri.host_str().unwrap(), &input.source.private_token)?;
 
-	let version = input.version.as_ref().unwrap();
-
 	let mr: MergeRequest = merge_requests::MergeRequest::builder()
 		.project(uri.path().trim_start_matches('/').trim_end_matches(".git"))
-		.merge_request(version.iid.parse::<u64>()?)
+		.merge_request(input.version.iid.parse::<u64>()?)
 		.build()?
 		.query(&client)?;
 
@@ -90,8 +77,8 @@ fn main() -> Result<()> {
 		.build()?
 		.query(&client)?;
 
-	let output = ResourceOutput {
-		version: version.clone(),
+	let output = Response {
+		version: input.version.clone(),
 		metadata: vec![
 			Metadata {
 				name: "url".to_owned(),
@@ -110,7 +97,7 @@ fn main() -> Result<()> {
 
 	println!("{}", serde_json::to_string_pretty(&output)?);
 
-	if !input.is_clone_skippable() {
+	if !input.params.is_some_and(|params| params.is_clone_skippable()) {
 		eprintln!("Cloning repository...");
 		let mut cb = RemoteCallbacks::new();
 		cb.credentials(|_, _, _| Cred::userpass_plaintext("oauth2", &input.source.private_token));
@@ -143,7 +130,7 @@ fn main() -> Result<()> {
 mod tests {
 	use super::{
 		Params,
-		ResourceInput,
+		Request,
 		Source,
 	};
 	use rstest::rstest;
@@ -155,7 +142,7 @@ mod tests {
 	#[case::no_skip_param(Some(Params { skip_clone: None }), false)]
 	fn test_is_clone_skippable(#[case] params: Option<Params>, #[case] expect: bool) {
 		#[allow(clippy::redundant_field_names)]
-		let input = ResourceInput {
+		let input = Request {
 			params: params,
 			source: Source {
 				labels: None,
@@ -164,8 +151,8 @@ mod tests {
 				uri: "".to_owned(),
 				skip_draft: None,
 			},
-			version: None,
+			version: "1",
 		};
-		assert_eq!(input.is_clone_skippable(), expect);
+		assert_eq!(input.params.is_some_and(|params| params.is_clone_skippable()), expect);
 	}
 }

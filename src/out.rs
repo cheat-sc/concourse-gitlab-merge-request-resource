@@ -16,6 +16,16 @@ use gitlab::{
 	},
 	Gitlab,
 };
+use rust_concourse_resource::{
+	output::{
+		Request,
+		Response,
+	},
+	resource::{
+		Metadata,
+		Resource,
+	},
+};
 use serde::{
 	Deserialize,
 	Serialize,
@@ -26,24 +36,12 @@ use std::io;
 use std::path::Path;
 use url::Url;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Params {
 	resource_name: String,
 	status: String,
 	pipeline_name: Option<String>,
 	coverage: Option<f64>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ResourceInput {
-	source: Source,
-	params: Params,
-}
-
-#[derive(Debug, Serialize)]
-struct ResourceOutput {
-	version: Version,
-	metadata: Vec<Metadata>,
 }
 
 #[derive(Parser)]
@@ -83,11 +81,11 @@ fn compose_params_from_instance_vars(
 fn main() -> Result<()> {
 	let args = Args::parse();
 
-	let input: ResourceInput =
-		get_data_from(&mut io::stdin()).map_err(|err| anyhow!("{}", err.downcast::<serde_json::Error>().unwrap()))?;
+	let input = Request::<Source, Params>::from_reader(io::stdin())?;
+	let params = input.params.unwrap();
 	let version: Version = serde_json::from_reader(File::open(
 		Path::new(&args.directory)
-			.join(&input.params.resource_name)
+			.join(&params.resource_name)
 			.join(".merge-request.json"),
 	)?)
 	.with_context(|| anyhow!("failed to read `.merge-request.json`"))?;
@@ -128,7 +126,7 @@ fn main() -> Result<()> {
 		build_pipeline_instance_vars,
 	);
 
-	let pipeline_name = if let Some(pipeline_name) = &input.params.pipeline_name {
+	let pipeline_name = if let Some(pipeline_name) = &params.pipeline_name {
 		pipeline_name
 			.clone()
 			.replace("%BUILD_PIPELINE_NAME%", &build_pipeline_name)
@@ -143,7 +141,7 @@ fn main() -> Result<()> {
 	builder
 		.project(mr.source_project_id)
 		.commit(&version.sha)
-		.state(match input.params.status.as_str() {
+		.state(match params.status.as_str() {
 			"canceled" => commits::CommitStatusState::Canceled,
 			"running" => commits::CommitStatusState::Running,
 			"pending" => commits::CommitStatusState::Pending,
@@ -153,14 +151,14 @@ fn main() -> Result<()> {
 		})
 		.name(&pipeline_name)
 		.target_url(&concourse_uri);
-	if let Some(coverage) = input.params.coverage {
+	if let Some(coverage) = params.coverage {
 		builder.coverage(coverage);
 	}
 
 	let response: CommitStatusResponce = builder.build()?.query(&client)?;
 
 	#[allow(clippy::redundant_field_names)]
-	let output = ResourceOutput {
+	let output = Response {
 		version: version,
 		metadata: vec![
 			Metadata {
