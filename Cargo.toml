@@ -24,6 +24,7 @@ clap = { version = "4.5.4", features = ["derive"] }
 git2 = "0.15.0"
 gitlab = "0.1801.0"
 glob = "0.3.1"
+rust-concourse-resource = { git = "https://gitlab.com/cheatsc/rust-concourse-resource.git", rev = "530ad14" }
 serde = "1.0.199"
 serde_json = "1.0.116"
 url = "2.5.0"
